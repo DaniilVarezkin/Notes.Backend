@@ -9,7 +9,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 var services = builder.Services;
 
-services.AddMvc();
 services.AddControllers();
 services.AddAutoMapper(config =>
 {
