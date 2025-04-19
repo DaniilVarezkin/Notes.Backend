@@ -6,6 +6,11 @@ using System.Reflection;
 using Notes.Application.Interfaces;
 using Notes.WebApi.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Swashbuckle.AspNetCore.SwaggerGen;
+using Notes.WebApi;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,12 +47,22 @@ services.AddAuthentication(config =>
     options.RequireHttpsMetadata = false;
 });
 
+services.AddVersionedApiExplorer(options =>
+{
+    options.GroupNameFormat = "'v'VVV";
+});
+
+services.AddTransient<IConfigureOptions<SwaggerGenOptions>,
+    ConfigureSwaggerOptions>();
+
 services.AddSwaggerGen(config =>
 {
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
     config.IncludeXmlComments(xmlPath);
 });
+
+services.AddApiVersioning();
 
 var app = builder.Build();
 
@@ -65,22 +80,36 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-app.UseSwagger();
-app.UseSwaggerUI(cfg =>
-{
-    cfg.RoutePrefix = string.Empty;
-    cfg.SwaggerEndpoint("swagger/v1/swagger.json", "Notes API");
-});
-
-app.UseCustomExceptionHandler();
-
-app.UseRouting();
-app.UseHttpsRedirection();
-app.UseCors("AllowAll");
-
-app.UseAuthentication();
-app.UseAuthorization();
-
-app.MapControllers();
+var apiVersionDescriptionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+Configure(app, apiVersionDescriptionProvider);
 
 app.Run();
+
+void Configure(WebApplication app, IApiVersionDescriptionProvider provider)
+{
+
+    app.UseSwagger();
+    app.UseSwaggerUI(cfg =>
+    {
+        foreach (var description in provider.ApiVersionDescriptions)
+        {
+            cfg.SwaggerEndpoint(
+                $"/swagger/{description.GroupName}/swagger.json",
+                description.GroupName.ToUpperInvariant());
+        }
+
+        cfg.RoutePrefix = string.Empty;
+        cfg.SwaggerEndpoint("swagger/v1/swagger.json", "Notes API");
+    });
+
+    app.UseCustomExceptionHandler();
+
+    app.UseRouting();
+    app.UseHttpsRedirection();
+    app.UseCors("AllowAll");
+
+    app.UseAuthentication();
+    app.UseAuthorization();
+    app.UseApiVersioning();
+    app.MapControllers();
+}
