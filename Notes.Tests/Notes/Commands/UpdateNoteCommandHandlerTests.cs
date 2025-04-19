@@ -24,7 +24,7 @@ namespace Notes.Tests.Notes.Commands
             }, CancellationToken.None);
 
             // Assert
-            Assert.NotNull(Context.Notes.SingleOrDefaultAsync(note => 
+            Assert.NotNull(await Context.Notes.SingleOrDefaultAsync(note => 
                 note.Id == NotesContextFactory.NoteIdForUpdate &&
                 note.Title == updatedTitle));
         }

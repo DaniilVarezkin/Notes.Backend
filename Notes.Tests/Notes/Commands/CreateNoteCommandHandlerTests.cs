@@ -25,7 +25,6 @@ namespace Notes.Tests.Notes.Commands
                 CancellationToken.None);
 
             // Assert
-
             Assert.NotNull(
                 await Context.Notes.SingleOrDefaultAsync(note =>
                     note.Id == noteId &&
